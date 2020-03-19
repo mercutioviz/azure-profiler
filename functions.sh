@@ -58,12 +58,17 @@ function get_vms() {
     return 0
 }
 
+function get_locations() {
+    #
+    location_list=`$AZ_CMD account list-locations | jq '.[] | .name'`
+}
+
 function get_resource_groups() {
     #
     case "$CLOUD" in
     Azure)
         # Get Azure RGs
-        rglist=`/usr/bin/az group list --query "[?location=='${location}']" | json_pp | jq -r '.[] | .name'`
+        rglist=`$AZ_CMD group list --query "[?location=='${location}']" | json_pp | jq -r '.[] | .name'`
         ;;
     AWS)
         # Get AWS RGs
@@ -81,7 +86,7 @@ function get_resource_groups() {
 
 function get_vnets() {
     #
-    vnet_json=`az network vnet list --query "[?location=='${location}']" | json_pp`
+    vnet_json=`$AZ_CMD network vnet list --query "[?location=='${location}']" | json_pp`
     #dprint "VNet JSON data: ${vnet_json}"
     vnetlist=`echo "${vnet_json}" | jq -r '.[] | .name'`
     dprint "VNet list: ${vnet_list}"
