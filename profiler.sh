@@ -98,16 +98,18 @@ else
     exit 1
 fi
 
+get_locations
 if [[ -z "${DEPLOY_LOCATION}" ]]; then
     ## enumerate locations for this sub
     report "--==  Profile report for multiple locations for subscription ${sub_name} ==--"
-    get_locations
     for location in `echo "${location_list}"`; do
         echo "Processing ${location}..."
+	location_name=`echo "${location_json}" |jp "[?name=='${location}']" | jq -r '.[].displayName'`
 	get_resource_groups
 	if [[ "$rg_count" -ge 1 ]]; then
 	    ## Skip unless we actually have RGs
-	    report "-- ${location}"
+	    report
+	    report "--== Location: ${location_name} ==--"
 	    report "Resource Groups:"
 	    for I in $rg_list; do report "  $I"; done
 	    get_vnets
@@ -118,15 +120,19 @@ if [[ -z "${DEPLOY_LOCATION}" ]]; then
 	    for I in $vm_list; do report "  $I"; done
 	fi
     done
+    report
 else
     ## use location supplied via arg
     location=`echo "${DEPLOY_LOCATION}" | sed -e "s/'//g"`
-    echo "Location: ${location}"
+    echo -n "Location: ${location}"
+    location_name=`echo "${location_json}" |jp "[?name=='${location}']" | jq -r '.[].displayName'`
+    echo " (${location_name})"
     get_resource_groups
     get_vnets
     get_vms
 
-    report "Report for subscription ${sub_name} and location ${location}"
+    report "Report for subscription ${sub_name}"
+    report " and location ${location_name}"
     report "============================================================"
     report "Resource Groups:"
     for I in $rg_list; do report "  $I"; done

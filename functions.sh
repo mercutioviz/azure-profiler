@@ -8,10 +8,8 @@ dprint() {
 }
 
 report() {
-    if [[ ! -z "$@" ]]; then
-	dprint "Report Data: $@"
-	echo "$@" >> $TMPFILE
-    fi
+    dprint "Report Data: $@"
+    echo "$@" >> $TMPFILE
 }
 
 get_selection() {
