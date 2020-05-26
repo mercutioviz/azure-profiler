@@ -17,8 +17,8 @@ if [[ -z "${AZ_CMD}" ]]; then
 fi
 
 # Process arguments
-if ! options=$(getopt -o hdvr:p:l: \
-        -l help,debug,verbose,rg:,password:,location: \
+if ! options=$(getopt -o hdvcr:p:l: \
+        -l help,debug,verbose,current-sub,rg:,password:,location: \
         -- "$@") #"
 then
     # something went wrong, getopt will put out an error message for us
@@ -36,6 +36,7 @@ do
                 ;;
     -d|--debug) DEBUG='true' ;;
     -v|--verbose) DEBUG='true' ;;
+    -c|--current-sub) CURRENT_SUB="true" ;;
     # for options with required arguments, an additional shift is required
     -r|--rg) RESOURCE_GROUP="$2" ; shift;;
     -l|--location) DEPLOY_LOCATION="$2" ; shift;;
@@ -49,7 +50,7 @@ done
 
 dprint "Debug on..."
 
-az_subs=`az account list`
+az_subs=`$AZ_CMD account list 2>/dev/null`
 dprint "${az_subs}" | jq '.'
 az_sub_count=`echo "${az_subs}" | jq '. | length'`
 dprint "Found ${az_sub_count} sub(s)"
@@ -57,22 +58,48 @@ dprint "Found ${az_sub_count} sub(s)"
 if [[ "${az_sub_count}" -eq 1 ]]; then
     sub_name=`echo "${az_subs}" | jq -r '.[0] | .name'`
     dprint "Found 1 sub: ${sub_name}"
+elif [[ ! -z "$CURRENT_SUB" ]]; then
+    current_sub=`$AZ_CMD account show 2>/dev/null`
+    sub_id=`echo "${current_sub}" | jq -r '.id'`
+    sub_name=`echo "${current_sub}" | jq -r ".name"`    
+    echo "Using current default subscription ${sub_id} ($sub_name)"
 elif [[ "${az_sub_count}" -gt 1 ]]; then
     ## Multiple subs, select one first
     echo "Choose a sub..."
+    az_sub_list=`echo ${az_subs} | jq -r '.[] | [.id,.name] | @csv'`
+    dprint "Azure sub list is: '$az_sub_list'"
+    get_selection "$az_sub_list"
+    dprint "Selection / REPLY : '$my_selection' / '$REPLY'"
+    
+    ## Assign name and id
+    if [[ $REPLY -ge 1 ]]; then
+	sub_idx=$(($REPLY-1))
+    else
+	sub_idx=0
+    fi
+
+    sub_id=`echo "${az_subs}" | jq -r ".[${sub_idx}].id"`
+    sub_name=`echo "${az_subs}" | jq -r ".[${sub_idx}].name"`
+    echo "Found subscription '${sub_name}' (${sub_id})"
+    echo "Profile operation continuing..."
+    $AZ_CMD account set -s ${sub_id} 2>/dev/null
+    echo -n "Azure account set to "
+    $AZ_CMD account show 2>/dev/null | jq '.id'
+    echo
+
 else
     ## Something went wrong...
     exit 1
 fi
 
-echo "Found subscription '${sub_name}'"
-echo "Profile operation continuing..."
-
 if [[ -z "${DEPLOY_LOCATION}" ]]; then
     ## enumerate locations for this sub
     get_locations
     for location in `echo "${location_list}"`; do
-        echo "Processing '${location}'..."
+	location="'${location}'"
+        echo "Processing ${location}..."
+	get_resource_groups
+	for I in $rg_list; do echo "  $I"; done
     done
 else
     ## use location supplied via arg
@@ -80,4 +107,19 @@ else
     echo "Location: ${location}"
     get_resource_groups
     get_vnets
+    get_vms
+
+    echo
+    echo "Report for subscription ${sub_name} and location ${location}"
+    echo "============================================================"
+    echo "Resource Groups:"
+    for I in $rg_list; do echo "  $I"; done
+    echo
+    echo "Virtual Networks:"
+    for I in $vnet_list; do echo "  $I"; done
+    echo
+    echo "Virtual Machines:"
+    for I in $vm_list; do echo "  $I"; done
+    echo
+    
 fi

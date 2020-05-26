@@ -13,12 +13,19 @@ get_selection() {
         dprint "Call to get_selection function w/o an argument; no selection set"
     else
         #
-        select my_selection in `echo $@`;
-        do 
+	PS3="Select an item: "
+	#for I in `echo "$@"`; do echo $I; done
+	
+        OIFS=$IFS
+	IFS=$'\n'
+	dprint "Args: $@"
+	select my_selection in `echo "$@"`;
+        do
+	    echo $REPLY
             echo "You chose '${my_selection}' - press <enter> to accept, any other key select again"
             stty_orig=`stty -g` # save original terminal setting.
             stty -echo          # turn-off echoing.
-            read ans            # read the RG
+            read ans            # read the verify action
             stty $stty_orig     # restore terminal setting.
             if [ -z "$ans" ] 
             then
@@ -27,6 +34,7 @@ get_selection() {
                 echo ""
             fi
         done
+	IFS=$OIFS
     fi
 }
 
@@ -55,12 +63,15 @@ cloud_cli_available() {
 
 function get_vms() {
     #
+    vm_json=`$AZ_CMD vm list --query "[?location==${location}]"`
+    vm_list=`echo "${vm_json}" | jq -r '.[].name'`
     return 0
 }
 
 function get_locations() {
     #
-    location_list=`$AZ_CMD account list-locations | jq '.[] | .name'`
+    location_list=`$AZ_CMD account list-locations | jq -r '.[].name'`
+    #location_list=`$AZ_CMD account list-locations | jq -r '.[].name' | egrep tus`
 }
 
 function get_resource_groups() {
@@ -68,7 +79,9 @@ function get_resource_groups() {
     case "$CLOUD" in
     Azure)
         # Get Azure RGs
-        rglist=`$AZ_CMD group list --query "[?location=='${location}']" | json_pp | jq -r '.[] | .name'`
+        rg_json=`$AZ_CMD group list --query "[?location==${location}]"`
+        rg_list=`echo "${rg_json}" | jq -r '.[].name'`
+	dprint $rg_list
         ;;
     AWS)
         # Get AWS RGs
@@ -86,9 +99,9 @@ function get_resource_groups() {
 
 function get_vnets() {
     #
-    vnet_json=`$AZ_CMD network vnet list --query "[?location=='${location}']" | json_pp`
-    #dprint "VNet JSON data: ${vnet_json}"
-    vnetlist=`echo "${vnet_json}" | jq -r '.[] | .name'`
+    vnet_json=`$AZ_CMD network vnet list --query "[?location==${location}]"`
+    dprint "VNet JSON data: ${vnet_json}"
+    vnet_list=`echo "${vnet_json}" | jq -r '.[] | .name'`
     dprint "VNet list: ${vnet_list}"
     vnet_count=`echo "${vnet_json}" | jq -r '. | length'`
     
