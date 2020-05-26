@@ -7,6 +7,13 @@ dprint() {
     fi
 }
 
+report() {
+    if [[ ! -z "$@" ]]; then
+	dprint "Report Data: $@"
+	echo "$@" >> $TMPFILE
+    fi
+}
+
 get_selection() {
     if [ -z "$@" ]
     then
@@ -63,15 +70,22 @@ cloud_cli_available() {
 
 function get_vms() {
     #
-    vm_json=`$AZ_CMD vm list --query "[?location==${location}]"`
+    vm_json=`$AZ_CMD vm list --query "[?location=='${location}']"`
     vm_list=`echo "${vm_json}" | jq -r '.[].name'`
     return 0
 }
 
 function get_locations() {
     #
-    location_list=`$AZ_CMD account list-locations | jq -r '.[].name'`
-    #location_list=`$AZ_CMD account list-locations | jq -r '.[].name' | egrep tus`
+    if [[ ! -z "$NORTH_AMERICA" ]]; then
+	echo "Getting North America resources only"
+	location_json=`$AZ_CMD account list-locations --query "[?contains(displayName,' US')||contains(displayName,'Canada ')]"  2>/dev/null`
+    else
+	location_json=`$AZ_CMD account list-locations 2>/dev/null`
+    fi
+    
+    location_list=`echo ${location_json} | jq -r '.[].name'`
+
 }
 
 function get_resource_groups() {
@@ -79,8 +93,9 @@ function get_resource_groups() {
     case "$CLOUD" in
     Azure)
         # Get Azure RGs
-        rg_json=`$AZ_CMD group list --query "[?location==${location}]"`
+        rg_json=`$AZ_CMD group list --query "[?location=='${location}']"`
         rg_list=`echo "${rg_json}" | jq -r '.[].name'`
+	rg_count=`echo "${rg_json}" | jq -r '. | length'`
 	dprint $rg_list
         ;;
     AWS)
@@ -99,7 +114,7 @@ function get_resource_groups() {
 
 function get_vnets() {
     #
-    vnet_json=`$AZ_CMD network vnet list --query "[?location==${location}]"`
+    vnet_json=`$AZ_CMD network vnet list --query "[?location=='${location}']"`
     dprint "VNet JSON data: ${vnet_json}"
     vnet_list=`echo "${vnet_json}" | jq -r '.[] | .name'`
     dprint "VNet list: ${vnet_list}"

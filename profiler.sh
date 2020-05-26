@@ -17,8 +17,8 @@ if [[ -z "${AZ_CMD}" ]]; then
 fi
 
 # Process arguments
-if ! options=$(getopt -o hdvcr:p:l: \
-        -l help,debug,verbose,current-sub,rg:,password:,location: \
+if ! options=$(getopt -o hdvcnr:p:l: \
+        -l help,debug,verbose,current-sub,north-america,rg:,password:,location: \
         -- "$@") #"
 then
     # something went wrong, getopt will put out an error message for us
@@ -37,6 +37,7 @@ do
     -d|--debug) DEBUG='true' ;;
     -v|--verbose) DEBUG='true' ;;
     -c|--current-sub) CURRENT_SUB="true" ;;
+    -n|--north-america) NORTH_AMERICA="false" ;;
     # for options with required arguments, an additional shift is required
     -r|--rg) RESOURCE_GROUP="$2" ; shift;;
     -l|--location) DEPLOY_LOCATION="$2" ; shift;;
@@ -48,8 +49,9 @@ do
     shift
 done
 
+TMPFILE=`mktemp`
 dprint "Debug on..."
-
+dprint "Tempfile file is $TMPFILE"
 az_subs=`$AZ_CMD account list 2>/dev/null`
 dprint "${az_subs}" | jq '.'
 az_sub_count=`echo "${az_subs}" | jq '. | length'`
@@ -94,32 +96,47 @@ fi
 
 if [[ -z "${DEPLOY_LOCATION}" ]]; then
     ## enumerate locations for this sub
+    report "--==  Profile report for multiple locations for subscription ${sub_name} ==--"
     get_locations
     for location in `echo "${location_list}"`; do
-	location="'${location}'"
         echo "Processing ${location}..."
 	get_resource_groups
-	for I in $rg_list; do echo "  $I"; done
+	if [[ "$rg_count" -ge 1 ]]; then
+	    ## Skip unless we actually have RGs
+	    report "-- ${location}"
+	    report "Resource Groups:"
+	    for I in $rg_list; do report "  $I"; done
+	    get_vnets
+	    report "Virtual Networks:"
+	    for I in $vnet_list; do report "  $I"; done
+	    get_vms
+	    report "Virtual Machines:"
+	    for I in $vm_list; do report "  $I"; done
+	fi
     done
 else
     ## use location supplied via arg
-    location="${DEPLOY_LOCATION}"
+    location=`echo "${DEPLOY_LOCATION}" | sed -e "s/'//g"`
     echo "Location: ${location}"
     get_resource_groups
     get_vnets
     get_vms
 
-    echo
-    echo "Report for subscription ${sub_name} and location ${location}"
-    echo "============================================================"
-    echo "Resource Groups:"
-    for I in $rg_list; do echo "  $I"; done
-    echo
-    echo "Virtual Networks:"
-    for I in $vnet_list; do echo "  $I"; done
-    echo
-    echo "Virtual Machines:"
-    for I in $vm_list; do echo "  $I"; done
-    echo
+    report "Report for subscription ${sub_name} and location ${location}"
+    report "============================================================"
+    report "Resource Groups:"
+    for I in $rg_list; do report "  $I"; done
+    report
+    report "Virtual Networks:"
+    for I in $vnet_list; do report "  $I"; done
+    report
+    report "Virtual Machines:"
+    for I in $vm_list; do report "  $I"; done
+    report
     
 fi
+echo
+echo
+cat $TMPFILE
+echo
+rm -f $TMPFILE
