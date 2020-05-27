@@ -16,6 +16,19 @@ if [[ -z "${AZ_CMD}" ]]; then
     exit 1
 fi
 
+JP_CMD=`which jp.py`
+echo "JP command: ${JP_CMD}"
+if [[ -z "${JP_CMD}" ]]; then
+    JP_CMD=`which jp`
+    if [[ -z "${JP_CMD}" ]]; then
+        echo "No JMESPath utility found."
+        echo "See https://github.com/jmespath for options. Recommend jp.py"
+        exit 1
+    fi
+fi
+
+echo "Found jp utility: ${JP_CMD}"
+
 # Process arguments
 if ! options=$(getopt -o hdvcnr:p:l: \
         -l help,debug,verbose,current-sub,north-america,rg:,password:,location: \
@@ -104,7 +117,7 @@ if [[ -z "${DEPLOY_LOCATION}" ]]; then
     report "--==  Profile report for multiple locations for subscription ${sub_name} ==--"
     for location in `echo "${location_list}"`; do
         echo "Processing ${location}..."
-	location_name=`echo "${location_json}" |jp "[?name=='${location}']" | jq -r '.[].displayName'`
+	location_name=`echo "${location_json}" |jp.py "[?name=='${location}']" | jq -r '.[].displayName'`
 	get_resource_groups
 	if [[ "$rg_count" -ge 1 ]]; then
 	    ## Skip unless we actually have RGs
@@ -125,7 +138,7 @@ else
     ## use location supplied via arg
     location=`echo "${DEPLOY_LOCATION}" | sed -e "s/'//g"`
     echo -n "Location: ${location}"
-    location_name=`echo "${location_json}" |jp "[?name=='${location}']" | jq -r '.[].displayName'`
+    location_name=`echo "${location_json}" |jp.py "[?name=='${location}']" | jq -r '.[].displayName'`
     echo " (${location_name})"
     get_resource_groups
     get_vnets
