@@ -10,6 +10,7 @@ echo "
 # Stop running when command returns error
 set -e
 CLOUD='Azure'
+CURRENT_SUB='true'
 AZ_CMD=`command -v az`
 if [[ -z "${AZ_CMD}" ]]; then
     echo "Azure CLI command not found. Install Azure CLI. See xxx for details."
@@ -40,17 +41,25 @@ while [ $# -gt 0 ]
 do
     case $1 in
     -h|--help) 
+                echo
                 echo "Azure profiler" 
+                echo 
+                echo "-d, --debug           Enable debug output"
+                echo "-v, --verbose         Same as debug"
+                echo "-c, --choose-sub      Choose subscription (default is current subscription)"
+                echo "-n, --north-america   North Americ regions only"
+                echo "-r, --rg              Restrict search to specifc resource group"
+                echo "-l, --location        Restrict search to specific location"
+                echo
                 exit 0
                 ;;
     -d|--debug) DEBUG='true' ;;
     -v|--verbose) DEBUG='true' ;;
-    -c|--current-sub) CURRENT_SUB="true" ;;
+    -c|--choose-sub) CURRENT_SUB="false" ;;
     -n|--north-america) NORTH_AMERICA="false" ;;
     # for options with required arguments, an additional shift is required
     -r|--rg) RESOURCE_GROUP="$2" ; shift;;
     -l|--location) DEPLOY_LOCATION="$2" ; shift;;
-    -p|--password) DEPLOY_PASSWORD="$2" ; shift;;
     (--) shift; break;;
     (-*) echo "$0: error - unrecognized option $1" 1>&2; exit 1;;
     (*) break;;
@@ -73,7 +82,7 @@ dprint "Found ${az_sub_count} sub(s)"
 if [[ "${az_sub_count}" -eq 1 ]]; then
     sub_name=`echo "${az_subs}" | jq -r '.[0] | .name'`
     dprint "Found 1 sub: ${sub_name}"
-elif [[ ! -z "$CURRENT_SUB" ]]; then
+elif [[ "$CURRENT_SUB" == "true" ]]; then
     sub_id=`echo "${current_sub}" | jq -r '.id'`
     sub_name=`echo "${current_sub}" | jq -r ".name"`    
     echo "Using current default subscription ${sub_id} ($sub_name)"
