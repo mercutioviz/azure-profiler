@@ -122,7 +122,7 @@ if [[ -z "${DEPLOY_LOCATION}" ]]; then
     report "--==  Profile report for multiple locations for subscription ${sub_name} ==--"
     for location in `echo "${location_list}"`; do
         echo "Processing ${location}..."
-	location_name=`echo "${location_json}" |${JP_CMD} "[?name=='${location}']" | jq -r '.[].displayName'`
+	location_name=`echo "${location_json}" |${JP_CMD} "[?name=='${location}']" | jq -r '.[].displayName'` #"
 	get_resource_groups
 	if [[ "$rg_count" -ge 1 ]]; then
 	    ## Skip unless we actually have RGs
