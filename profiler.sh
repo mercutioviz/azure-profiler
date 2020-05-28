@@ -10,22 +10,18 @@ echo "
 # Stop running when command returns error
 set -e
 CLOUD='Azure'
-AZ_CMD=`which az`
+AZ_CMD=`command -v az`
 if [[ -z "${AZ_CMD}" ]]; then
     echo "Azure CLI command not found. Install Azure CLI. See xxx for details."
     exit 1
 fi
 
-JP_CMD=`which jp.py`
-echo "JP command: ${JP_CMD}"
-if [[ -z "${JP_CMD}" ]]; then
-    JP_CMD=`which jp`
-    if [[ -z "${JP_CMD}" ]]; then
+JP_CMD=`command -v jp.py` || JP_CMD=`command -v jp` ||
+    {
         echo "No JMESPath utility found."
         echo "See https://github.com/jmespath for options. Recommend jp.py"
         exit 1
-    fi
-fi
+    }
 
 echo "Found jp utility: ${JP_CMD}"
 
