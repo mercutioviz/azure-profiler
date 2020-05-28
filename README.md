@@ -10,3 +10,7 @@ for simplicity use this the first time:
 profiler.sh -l eastus
 
 Replace 'eastus' with a location name where you know your subscription has resources deployed
+
+To see e everything you have in North America regions:
+profiler.sh -n
+
