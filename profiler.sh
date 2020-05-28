@@ -122,7 +122,7 @@ if [[ -z "${DEPLOY_LOCATION}" ]]; then
     report "--==  Profile report for multiple locations for subscription ${sub_name} ==--"
     for location in `echo "${location_list}"`; do
         echo "Processing ${location}..."
-	location_name=`echo "${location_json}" |jp.py "[?name=='${location}']" | jq -r '.[].displayName'`
+	location_name=`echo "${location_json}" |${JP_CMD} "[?name=='${location}']" | jq -r '.[].displayName'`
 	get_resource_groups
 	if [[ "$rg_count" -ge 1 ]]; then
 	    ## Skip unless we actually have RGs
@@ -143,7 +143,7 @@ else
     ## use location supplied via arg
     location=`echo "${DEPLOY_LOCATION}" | sed -e "s/'//g"`
     echo -n "Location: ${location}"
-    location_name=`echo "${location_json}" |jp.py "[?name=='${location}']" | jq -r '.[].displayName'`
+    location_name=`echo "${location_json}" |${JP_CMD} "[?name=='${location}']" | jq -r '.[].displayName'`
     echo " (${location_name})"
     get_resource_groups
     get_vnets
